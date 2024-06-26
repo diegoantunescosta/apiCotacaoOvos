@@ -38,9 +38,9 @@ def scrape_egg_prices(date):
         if cols[0].text.strip():  
             item = {
                 "Data": cols[0].text.strip(),
-                "Região/Tipo": cols[1].text.strip(),
-                "Preço (R$/30 dz)": float(cols[2].text.strip().replace(',', '.')),
-                "Variação/Semana (%)": float(cols[3].text.strip().replace(',', '.').replace('+', '').replace('%', ''))
+                "Regiao/Tipo": cols[1].text.strip(),
+                "Preco (R$/30 dz)": float(cols[2].text.strip().replace(',', '.')),
+                "Variacao/Semana (%)": float(cols[3].text.strip().replace(',', '.').replace('+', '').replace('%', ''))
             }
             data.append(item)
     
