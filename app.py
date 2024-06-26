@@ -3,8 +3,12 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 from flasgger import Swagger
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
+
+
 swagger = Swagger(app)
 
 def scrape_egg_prices(date):
@@ -93,4 +97,4 @@ def get_egg_prices():
         return jsonify({"error": "Invalid date format. Please use YYYY-MM-DD"}), 400
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0",debug=True)
+    app.run(host="0.0.0.0",port=5000 ,debug=True)
