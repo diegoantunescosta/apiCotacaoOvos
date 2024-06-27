@@ -18,12 +18,11 @@ def scraping_ovos_online():
     if response.status_code == 200:
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # Extraindo o valor do dólar
+  
         dolar_info = []
         dolar_td = soup.find('td', string=lambda text: text and 'Valores do d' in text)
         if dolar_td:
             dolar_text = dolar_td.text.strip()
-            # Parsing the dollar values using the correct format
             dolar_values = dolar_text.split(':')
             data_atual = dolar_values[0].split('em')[1].split(',')[0].strip()
             valores = [
@@ -39,7 +38,6 @@ def scraping_ovos_online():
                         "Dolar": "R$" + valor
                     })
         
-        # Encontrando e extraindo os valores de Milho, Farelo de Soja e Ovos Tipo Extra
         milho_valores = []
         farelo_valores = []
         ovos_valores = []
@@ -58,7 +56,6 @@ def scraping_ovos_online():
                 ovos_rows = table.find_all('td', align='center')
                 ovos_valores.extend([clean_value(row.text.strip()) for row in ovos_rows])
         
-        # Montando e retornando um dicionário com os dados
         dados = {
             "Valores do Dolar": dolar_info,
             "Milho": organize_values(milho_valores, periodos),
@@ -71,12 +68,11 @@ def scraping_ovos_online():
         return {"error": f'Falha ao acessar o site. Código de status: {response.status_code}'}
 
 def clean_value(value):
-    # Limpa valores removendo caracteres não numéricos
+
     value = value.replace('R$', '').replace('$', '').replace('\n', '').replace('*', '').replace(',', '.').strip()
     return value
 
 def organize_values(values, periodos):
-    # Organiza os valores em pares de preço e câmbio e adiciona os períodos
     organized = []
     for i in range(0, len(values), 2):
         price = values[i]
@@ -89,8 +85,7 @@ def organize_values(values, periodos):
         })
     return organized
 
-# Rota para acessar os dados via API
-@app.route('/ovos_online', methods=['GET'])
+@app.route('/api/eggs_online', methods=['GET'])
 def get_ovos_online():
     """
     Endpoint para obter dados do site Ovos Online
@@ -160,7 +155,6 @@ def scrape_ovo_online_statistics():
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
-    # Find the main table containing statistics
     main_table = soup.find('table', width='460')
 
     if not main_table:
@@ -168,18 +162,15 @@ def scrape_ovo_online_statistics():
 
     rows = main_table.find_all('tr')
 
-    # Extracting relevant data from the table
     data = {}
     current_category = None
 
     for row in rows:
         cells = row.find_all('td')
 
-        # Check if it's a category header
         if len(cells) == 1 and 'ESTAT&Iacute;STICA' in cells[0].text:
             current_category = cells[0].text.strip()
 
-        # Extract data if it's in the format we expect
         elif len(cells) >= 10:
             if current_category:
                 category_data = {
@@ -192,49 +183,6 @@ def scrape_ovo_online_statistics():
                 data[current_category] = category_data
 
     return data
-
-@app.route('/api/statistics', methods=['GET'])
-def get_ovo_online_statistics():
-    """
-    Retrieve statistics data from Ovo Online website.
-
-    ---
-    responses:
-      200:
-        description: Statistics data from Ovo Online website.
-        schema:
-          type: object
-          properties:
-            ESTAT&Iacute;STICA:
-              type: object
-              properties:
-                Preço Atual:
-                  type: string
-                  description: Current price.
-                Variação 30 dias:
-                  type: string
-                  description: Price variation in the last 30 days.
-                Preço 30 dias:
-                  type: string
-                  description: Price 30 days ago.
-                Variação 1 ano:
-                  type: string
-                  description: Price variation in the last year.
-                Preço 1 ano:
-                  type: string
-                  description: Price 1 year ago.
-      404:
-        description: Statistics data not found or failed to scrape.
-
-    """
-    try:
-        data = scrape_ovo_online_statistics()
-        if not data:
-            return jsonify({"error": "Statistics data not found or failed to scrape."}), 404
-        else:
-            return jsonify(data)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 def scrape_egg_prices(date):
     """
