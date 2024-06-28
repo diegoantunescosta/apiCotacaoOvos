@@ -4,12 +4,13 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from flasgger import Swagger
 from flask_cors import CORS
+import threading
+import time
 
 app = Flask(__name__)
 CORS(app)
 
 swagger = Swagger(app)
-
 
 def scraping_ovos_online():
     url = 'https://www.ovoonline.com.br/'
@@ -18,7 +19,6 @@ def scraping_ovos_online():
     if response.status_code == 200:
         soup = BeautifulSoup(response.content, 'html.parser')
         
-  
         dolar_info = []
         dolar_td = soup.find('td', string=lambda text: text and 'Valores do d' in text)
         if dolar_td:
@@ -68,7 +68,6 @@ def scraping_ovos_online():
         return {"error": f'Falha ao acessar o site. Código de status: {response.status_code}'}
 
 def clean_value(value):
-
     value = value.replace('R$', '').replace('$', '').replace('\n', '').replace('*', '').replace(',', '.').strip()
     return value
 
@@ -141,8 +140,6 @@ def get_ovos_online():
     """
     dados_scraped = scraping_ovos_online()
     return jsonify(dados_scraped)
-
-
 
 def scrape_ovo_online_statistics():
     """
@@ -219,6 +216,7 @@ def scrape_egg_prices(date):
     
     return data
 
+
 @app.route('/api/egg-prices', methods=['GET'])
 def get_egg_prices():
     """
@@ -268,6 +266,15 @@ def get_egg_prices():
             return jsonify(data)
     except ValueError:
         return jsonify({"error": "Invalid date format. Please use YYYY-MM-DD"}), 400
-    
+
+def call_api_every_minute():
+    try:
+        response = requests.get('https://apicotacaoovos.onrender.com/api/eggs_online')
+        print(f"Status code: {response.status_code}, Response: {response.json()}")
+    except Exception as e:
+        print(f"Failed to call API: {e}")
+    threading.Timer(60, call_api_every_minute).start()
+
 if __name__ == '__main__':
+    threading.Timer(1, call_api_every_minute).start()
     app.run(host="0.0.0.0", port=5000, debug=True)
