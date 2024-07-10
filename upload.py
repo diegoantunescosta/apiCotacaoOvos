@@ -10,7 +10,7 @@ from flasgger import Swagger
 app = Flask(__name__)
 swagger = Swagger(app)
 
-URI = os.getenv("MONGODB_URI", "mongodb+srv://default:default@cluster0.ifc5n.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+URI = os.getenv('MONGODB_URI')
 
 def save_object_to_json(data, file_path):
     try:
