@@ -4,3 +4,4 @@ beautifulsoup4
 flasgger
 flask_cors
 openpyxl
+pymongo
