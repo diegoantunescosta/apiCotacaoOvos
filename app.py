@@ -5,7 +5,12 @@ from datetime import datetime
 from flasgger import Swagger
 from flask_cors import CORS
 import threading
-import time
+from datetime import datetime
+from flask import Flask, request, jsonify
+import os
+from flasgger import Swagger
+from upload import process_excel, save_to_mongodb
+
 
 app = Flask(__name__)
 CORS(app)
@@ -266,6 +271,43 @@ def get_egg_prices():
             return jsonify(data)
     except ValueError:
         return jsonify({"error": "Invalid date format. Please use YYYY-MM-DD"}), 400
+    
+
+@app.route('/upload_excel', methods=['POST'])
+def upload_file():
+    """
+    Upload an Excel file and process its data.
+    ---
+    parameters:
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: The Excel file to upload
+    responses:
+      200:
+        description: File processed and data saved to MongoDB
+      400:
+        description: No file part or no selected file
+      500:
+        description: Failed to process the Excel file or save data to MongoDB
+    """
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+    if file:
+        file_path = os.path.join('/tmp', file.filename)
+        file.save(file_path)
+        data = process_excel(file_path)
+        if data:
+            if save_to_mongodb(data):
+                return jsonify({"success": "File processed and data saved to MongoDB"}), 200
+            else:
+                return jsonify({"error": "Failed to save data to MongoDB"}), 500
+        else:
+            return jsonify({"error": "Failed to process the Excel file"}), 500
 
 def call_api_every_minute():
     try:
@@ -274,6 +316,7 @@ def call_api_every_minute():
     except Exception as e:
         print(f"Failed to call API: {e}")
     threading.Timer(60, call_api_every_minute).start()
+
 
 if __name__ == '__main__':
     threading.Timer(1, call_api_every_minute).start()
