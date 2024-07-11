@@ -10,12 +10,19 @@ from flask import Flask, request, jsonify
 import os
 from flasgger import Swagger
 from upload import process_excel, save_to_mongodb
+from bson.json_util import dumps
+from pymongo import MongoClient
 
 
 app = Flask(__name__)
 CORS(app)
 
 swagger = Swagger(app)
+
+URI = os.getenv('MONGODB_URI')
+client = MongoClient(URI)
+db = client['Artabas']
+collection = db['Aplicativo']
 
 def scraping_ovos_online():
     url = 'https://www.ovoonline.com.br/'
@@ -308,6 +315,88 @@ def upload_file():
                 return jsonify({"error": "Failed to save data to MongoDB"}), 500
         else:
             return jsonify({"error": "Failed to process the Excel file"}), 500
+        
+
+
+@app.route('/getData', methods=['GET'])
+def get_data():
+    """
+    Retorna dados do MongoDB relacionados às planilhas.
+    ---
+    
+    description: Retorna estatísticas agregadas das planilhas do MongoDB.
+    responses:
+      200:
+        description: Dados extraídos com sucesso
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  Sheet:
+                    type: string
+                    description: Nome da planilha
+                  TotalAvesMortas:
+                    type: integer
+                    description: Total de aves mortas na planilha
+                  TotalPrevistoRacao:
+                    type: integer
+                    description: Total previsto de ração na planilha
+                  TotalRealRacao:
+                    type: integer
+                    description: Total real de ração na planilha
+      500:
+        description: Erro interno no servidor
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  description: Mensagem de erro detalhada
+    """
+  
+    try:
+        sheets = collection.distinct('Sheet')
+        all_data = []
+
+        for sheet in sheets:
+            data = list(collection.find({'Sheet': sheet}))
+            total_aves_mortas = 0
+            total_previsto_racao = 0
+            total_real_racao = 0
+
+            for entry in data:
+                for tabela in entry['Data']['Tabela']:
+                    if isinstance(tabela['Aves Mortas'], int):
+                        total_aves_mortas += tabela['Aves Mortas']
+
+                    previsto_racao = tabela.get('Previsto Ração', 0)
+                    if isinstance(previsto_racao, (int, float)):
+                        total_previsto_racao += previsto_racao
+
+                    real_racao = tabela.get('Real Ração', 0)
+                    if isinstance(real_racao, (int, float)):
+                        total_real_racao += real_racao
+
+            total_previsto_racao = round(total_previsto_racao)
+
+            sheet_data = {
+                'Sheet': sheet,
+                'TotalAvesMortas': total_aves_mortas,
+                'TotalPrevistoRacao': total_previsto_racao,
+                'TotalRealRacao': total_real_racao,
+            }
+
+            all_data.append(sheet_data)
+
+        return jsonify(all_data), 200
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 def call_api_every_minute():
     try:
