@@ -20,6 +20,7 @@ CORS(app)
 swagger = Swagger(app)
 
 URI = os.getenv('MONGODB_URI')
+
 client = MongoClient(URI)
 db = client['Artabas']
 collection = db['Aplicativo']
@@ -398,15 +399,15 @@ def get_data():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-def call_api_every_minute():
-    try:
-        response = requests.get('https://apicotacaoovos.onrender.com/api/eggs_online')
-        print(f"Status code: {response.status_code}, Response: {response.json()}")
-    except Exception as e:
-        print(f"Failed to call API: {e}")
-    threading.Timer(60, call_api_every_minute).start()
+# def call_api_every_minute():
+#     try:
+#         response = requests.get('https://apicotacaoovos.onrender.com/api/eggs_online')
+#         print(f"Status code: {response.status_code}, Response: {response.json()}")
+#     except Exception as e:
+#         print(f"Failed to call API: {e}")
+#     threading.Timer(60, call_api_every_minute).start()
 
 
 if __name__ == '__main__':
-    threading.Timer(1, call_api_every_minute).start()
+    # threading.Timer(1, call_api_every_minute).start()
     app.run(host="0.0.0.0", port=5000, debug=True)
