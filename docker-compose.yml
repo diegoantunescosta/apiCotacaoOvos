@@ -9,7 +9,7 @@ services:
     networks:
 
 networks:
-  	mongo_mongo_network:
+  mongo_mongo_network:
 
 volumes:
   mongo_data:
