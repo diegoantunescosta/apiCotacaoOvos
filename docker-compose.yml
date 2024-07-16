@@ -6,5 +6,13 @@ services:
     container_name: flask_app
     ports:
       - "5000:5000"
+    networks:
+      - my_network
+
 volumes:
   mongo_data:
+
+networks:
+  my_network:
+    driver: bridge
+
