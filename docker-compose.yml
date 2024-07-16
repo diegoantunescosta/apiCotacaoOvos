@@ -7,20 +7,9 @@ services:
     ports:
       - "5000:5000"
     networks:
-      - app-network
-
-  mongo:
-    image: mongo:latest
-    container_name: mongo_db
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - app-network
 
 networks:
-  app-network:
+  	mongo_mongo_network:
 
 volumes:
   mongo_data:
