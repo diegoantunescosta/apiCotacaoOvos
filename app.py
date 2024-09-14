@@ -2,13 +2,11 @@ from flask import Flask, jsonify, request
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-from flasgger import Swagger
 from flask_cors import CORS
 import threading
 from datetime import datetime
 from flask import Flask, request, jsonify
 import os
-from flasgger import Swagger
 from upload import process_excel, save_to_mongodb
 from bson.json_util import dumps
 from pymongo import MongoClient
@@ -17,7 +15,7 @@ from pymongo import MongoClient
 app = Flask(__name__)
 CORS(app)
 
-swagger = Swagger(app)
+
 
 URI = os.getenv('MONGODB_URI')
 
@@ -322,10 +320,10 @@ def upload_file():
 @app.route('/getData', methods=['GET'])
 def get_data():
     """
-    Retorna dados do MongoDB relacionados às planilhas.
+    Retorna dados do MongoDB relacionados às planilhas com estatísticas diárias.
     ---
     
-    description: Retorna estatísticas agregadas das planilhas do MongoDB.
+    description: Retorna a quantidade de aves mortas e outros dados agregados por dia.
     responses:
       200:
         description: Dados extraídos com sucesso
@@ -336,18 +334,19 @@ def get_data():
               items:
                 type: object
                 properties:
-                  Sheet:
+                  Date:
                     type: string
-                    description: Nome da planilha
+                    format: date
+                    description: Data no formato YYYY-MM-DD
                   TotalAvesMortas:
                     type: integer
-                    description: Total de aves mortas na planilha
+                    description: Total de aves mortas na data
                   TotalPrevistoRacao:
                     type: integer
-                    description: Total previsto de ração na planilha
+                    description: Total previsto de ração na data
                   TotalRealRacao:
                     type: integer
-                    description: Total real de ração na planilha
+                    description: Total real de ração na data
       500:
         description: Erro interno no servidor
         content:
@@ -361,43 +360,69 @@ def get_data():
     """
   
     try:
-        sheets = collection.distinct('Sheet')
-        all_data = []
-
-        for sheet in sheets:
-            data = list(collection.find({'Sheet': sheet}))
-            total_aves_mortas = 0
-            total_previsto_racao = 0
-            total_real_racao = 0
-
-            for entry in data:
-                for tabela in entry['Data']['Tabela']:
-                    if isinstance(tabela['Aves Mortas'], int):
-                        total_aves_mortas += tabela['Aves Mortas']
-
-                    previsto_racao = tabela.get('Previsto Ração', 0)
-                    if isinstance(previsto_racao, (int, float)):
-                        total_previsto_racao += previsto_racao
-
-                    real_racao = tabela.get('Real Ração', 0)
-                    if isinstance(real_racao, (int, float)):
-                        total_real_racao += real_racao
-
-            total_previsto_racao = round(total_previsto_racao)
-
-            sheet_data = {
-                'Sheet': sheet,
-                'TotalAvesMortas': total_aves_mortas,
-                'TotalPrevistoRacao': total_previsto_racao,
-                'TotalRealRacao': total_real_racao,
+        pipeline = [
+            {
+                "$unwind": "$Data.Tabela"
+            },
+            {
+                "$group": {
+                    "_id": {
+                        "date": "$Data.Tabela.Data",
+                        "sheet": "$Sheet"
+                    },
+                    "total_aves_mortas": {
+                        "$sum": {
+                            "$cond": {
+                                "if": {"$gte": ["$Data.Tabela.Aves Mortas", 0]},
+                                "then": "$Data.Tabela.Aves Mortas",
+                                "else": 0
+                            }
+                        }
+                    },
+                    "total_previsto_racao": {
+                        "$sum": {
+                            "$cond": {
+                                "if": {"$gte": ["$Data.Tabela.Previsto Ração", 0]},
+                                "then": "$Data.Tabela.Previsto Ração",
+                                "else": 0
+                            }
+                        }
+                    },
+                    "total_real_racao": {
+                        "$sum": {
+                            "$cond": {
+                                "if": {"$gte": ["$Data.Tabela.Real Ração", 0]},
+                                "then": "$Data.Tabela.Real Ração",
+                                "else": 0
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "Date": "$_id.date",
+                    "Sheet": "$_id.sheet",
+                    "TotalAvesMortas": "$total_aves_mortas",
+                    "TotalPrevistoRacao": "$total_previsto_racao",
+                    "TotalRealRacao": "$total_real_racao"
+                }
+            },
+            {
+                "$sort": {
+                    "Date": 1
+                }
             }
+        ]
 
-            all_data.append(sheet_data)
+        result = list(collection.aggregate(pipeline))
 
-        return jsonify(all_data), 200
+        return jsonify(result), 200
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # def call_api_every_minute():
 #     try:

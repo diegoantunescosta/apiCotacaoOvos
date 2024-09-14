@@ -1,0 +1,18 @@
+{
+    "dev": {
+        "app_function": "app.app",
+        "aws_region": "us-east-1",
+        "exclude": [
+            "boto3",
+            "dateutil",
+            "botocore",
+            "s3transfer",
+            "concurrent"
+        ],
+        "profile_name": "default",
+        "project_name": "apiCotacaoOvos-artabas",
+        "runtime": "python3.8",
+        "s3_bucket": "zappa-gb6y92gcw",
+        "slim_handler": true
+    }
+}
